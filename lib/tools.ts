@@ -31,7 +31,7 @@ function arg<T>(args: Record<string, unknown>, key: string): T {
 
 const healthTools: ToolDef[] = [
   {
-    name: "telebothost_get_status",
+    name: "get_status",
     description:
       "Get TeleBotHost API health and status. Returns version, health status, and active environment. No authentication required.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -45,7 +45,7 @@ const healthTools: ToolDef[] = [
 
 const publicTools: ToolDef[] = [
   {
-    name: "telebothost_get_public_user",
+    name: "get_public_user",
     description:
       "Get a user's public profile (fullname, username, location, bio, avatar). No authentication required.",
     inputSchema: {
@@ -56,7 +56,7 @@ const publicTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/public/user/${arg(a, "username")}`)).data),
   },
   {
-    name: "telebothost_list_public_user_bots",
+    name: "list_public_user_bots",
     description:
       "List a user's published bots (bot templates + community store listings). Each item includes listing_type to distinguish them. No authentication required.",
     inputSchema: {
@@ -85,7 +85,7 @@ const publicTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_get_public_user_bot",
+    name: "get_public_user_bot",
     description:
       "Get full details for one published bot by its Telegram username. Includes description, README, commands, and env placeholders. No authentication required.",
     inputSchema: {
@@ -102,7 +102,7 @@ const publicTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_get_public_user_bot_readme",
+    name: "get_public_user_bot_readme",
     description:
       "Get only the description and README markdown for a published bot. No authentication required.",
     inputSchema: {
@@ -123,7 +123,7 @@ const publicTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_list_templates",
+    name: "list_templates",
     description:
       "Browse shareable bot blueprints (listing_type: bot_template). No authentication required.",
     inputSchema: {
@@ -138,7 +138,7 @@ const publicTools: ToolDef[] = [
       json((await c.get("/public/templates", { page: a.page, limit: a.limit, search: a.search })).data),
   },
   {
-    name: "telebothost_get_template",
+    name: "get_template",
     description:
       "Get one shareable bot template by ID, including description, README, commands, and env placeholders. No authentication required.",
     inputSchema: {
@@ -149,7 +149,7 @@ const publicTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/public/templates/${arg(a, "botid")}`)).data),
   },
   {
-    name: "telebothost_get_template_readme",
+    name: "get_template_readme",
     description:
       "Get the public description and README markdown for a template bot. No authentication required.",
     inputSchema: {
@@ -161,7 +161,7 @@ const publicTools: ToolDef[] = [
       json((await c.get(`/public/templates/${arg(a, "botid")}/readme`)).data),
   },
   {
-    name: "telebothost_list_public_store_bots",
+    name: "list_public_store_bots",
     description:
       "Browse the community bot store (public). Same data as the authenticated store list but requires no login. No authentication required.",
     inputSchema: {
@@ -184,7 +184,7 @@ const publicTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_get_public_store_bot",
+    name: "get_public_store_bot",
     description:
       "Get one community store listing by its store meta ID. No authentication required.",
     inputSchema: {
@@ -202,14 +202,14 @@ const publicTools: ToolDef[] = [
 
 const botTools: ToolDef[] = [
   {
-    name: "telebothost_list_bots",
+    name: "list_bots",
     description:
       "List all bots belonging to the authenticated user, with statistics. Requires API key.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: async (_a, c) => json((await c.get("/bot")).data),
   },
   {
-    name: "telebothost_register_bot",
+    name: "register_bot",
     description:
       "Register a new bot under your account. Requires sk_* (write) key. Subject to plan-based creation rate limits (e.g. 1 request per 5 min on FREE).",
     inputSchema: {
@@ -233,7 +233,7 @@ const botTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_delete_bots",
+    name: "delete_bots",
     description:
       "Soft-delete one or more bots (moved to 10-day backup during which they can be recovered). Requires sk_* key.",
     inputSchema: {
@@ -250,13 +250,13 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.delete("/bot", { ids: arg(a, "ids") })).data),
   },
   {
-    name: "telebothost_list_deleted_bots",
+    name: "list_deleted_bots",
     description: "List all soft-deleted bots in your 10-day backup window.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     handler: async (_a, c) => json((await c.get("/bot/deleted")).data),
   },
   {
-    name: "telebothost_recover_deleted_bot",
+    name: "recover_deleted_bot",
     description:
       "Restore a soft-deleted bot from backup. The bot is recovered with status 0 (disabled) for safety.",
     inputSchema: {
@@ -267,7 +267,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.post(`/bot/deleted/${arg(a, "botid")}/recover`)).data),
   },
   {
-    name: "telebothost_purge_deleted_bot",
+    name: "purge_deleted_bot",
     description:
       "Permanently delete a soft-deleted bot and all associated logs, users, and session records from backup. Irreversible.",
     inputSchema: {
@@ -278,7 +278,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.delete(`/bot/deleted/${arg(a, "botid")}/permanent`)).data),
   },
   {
-    name: "telebothost_pin_bots",
+    name: "pin_bots",
     description: "Pin or unpin one or more bots. Requires sk_* key.",
     inputSchema: {
       type: "object",
@@ -291,7 +291,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.patch("/bot/pin", { ids: arg(a, "ids"), pin: arg(a, "pin") })).data),
   },
   {
-    name: "telebothost_get_bot",
+    name: "get_bot",
     description: "Get detailed profile of a specific bot by ID.",
     inputSchema: {
       type: "object",
@@ -301,7 +301,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}`)).data),
   },
   {
-    name: "telebothost_update_bot",
+    name: "update_bot",
     description: "Update bot configuration (name, token, pin, status). Requires sk_* key.",
     inputSchema: {
       type: "object",
@@ -321,7 +321,7 @@ const botTools: ToolDef[] = [
     },
   },
   {
-    name: "telebothost_export_bot",
+    name: "export_bot",
     description:
       "Generate a temporary JWT token and download URL for exporting a bot configuration as ZIP (bot.yaml, .env, commands/). The URL is time-limited.",
     inputSchema: {
@@ -332,7 +332,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/export`)).data),
   },
   {
-    name: "telebothost_clone_bot",
+    name: "clone_bot",
     description:
       "Clone an owned bot or a public template bot under your account. Subject to cloning rate limits (1/sec, 5/min, 20/hr). Requires sk_* key.",
     inputSchema: {
@@ -343,7 +343,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.post(`/bot/${arg(a, "botid")}/clone`)).data),
   },
   {
-    name: "telebothost_clone_bot_as_child",
+    name: "clone_bot_as_child",
     description:
       "Clone a bot as a child bot. Child bots dynamically inherit environment variables and commands/folders from the parent without copying. Requires sk_* key. Subject to cloning rate limits.",
     inputSchema: {
@@ -354,7 +354,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.post(`/bot/${arg(a, "botid")}/clone-child`)).data),
   },
   {
-    name: "telebothost_list_bot_children",
+    name: "list_bot_children",
     description: "List all child bots registered under the specified parent bot.",
     inputSchema: {
       type: "object",
@@ -364,7 +364,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/children`)).data),
   },
   {
-    name: "telebothost_transfer_bot",
+    name: "transfer_bot",
     description:
       "Transfer a bot to another user (by email or user ID). The bot is actually cloned into the target's account with blank credentials and reset env vars; the original is preserved.",
     inputSchema: {
@@ -379,7 +379,7 @@ const botTools: ToolDef[] = [
       json((await c.post(`/bot/${arg(a, "botid")}/transfer`, { target: arg(a, "target") })).data),
   },
   {
-    name: "telebothost_reset_bot",
+    name: "reset_bot",
     description: "Reset bot logs, sessions, and flag all bot users as just-created. Requires sk_* key.",
     inputSchema: {
       type: "object",
@@ -389,7 +389,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.post(`/bot/${arg(a, "botid")}/reset`)).data),
   },
   {
-    name: "telebothost_toggle_bot_template",
+    name: "toggle_bot_template",
     description: "Toggle the is_template flag for a bot. Templates can be shared publicly and cloned by others.",
     inputSchema: {
       type: "object",
@@ -409,7 +409,7 @@ const botTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_get_bot_readme",
+    name: "get_bot_readme",
     description: "Get the description and README markdown for a bot (owner-only).",
     inputSchema: {
       type: "object",
@@ -419,7 +419,7 @@ const botTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/readme`)).data),
   },
   {
-    name: "telebothost_update_bot_readme",
+    name: "update_bot_readme",
     description:
       "Update bot description and README markdown. Only allowed if the bot is marked as a template. Description max 500 chars, README max 50000 chars.",
     inputSchema: {
@@ -445,7 +445,7 @@ const botTools: ToolDef[] = [
 
 const storageTools: ToolDef[] = [
   {
-    name: "telebothost_get_bot_storage_stats",
+    name: "get_bot_storage_stats",
     description: "Get sync and async storage size and key metrics for a bot and its users.",
     inputSchema: {
       type: "object",
@@ -459,7 +459,7 @@ const storageTools: ToolDef[] = [
       json((await c.get(`/bot/${arg(a, "botid")}/storage/stats`, { refresh: a.refresh })).data),
   },
   {
-    name: "telebothost_get_bot_storage_keys",
+    name: "get_bot_storage_keys",
     description: "List bot storage keys (without values) for sync and async storage.",
     inputSchema: {
       type: "object",
@@ -473,7 +473,7 @@ const storageTools: ToolDef[] = [
       json((await c.get(`/bot/${arg(a, "botid")}/storage/data`, { refresh: a.refresh })).data),
   },
   {
-    name: "telebothost_clear_bot_storage",
+    name: "clear_bot_storage",
     description:
       "Permanently delete all sync and async props for the bot and its user props. Irreversible. Requires sk_* key.",
     inputSchema: {
@@ -484,7 +484,7 @@ const storageTools: ToolDef[] = [
     handler: async (a, c) => json((await c.delete(`/bot/${arg(a, "botid")}/storage/data`)).data),
   },
   {
-    name: "telebothost_migrate_bot_storage",
+    name: "migrate_bot_storage",
     description:
       "Migrate sync Bot.setProp data to async db.xx storage. Supports dry-run preview. Options: scope (bot|user|both), dryRun, overwrite, deleteSource.",
     inputSchema: {
@@ -512,7 +512,7 @@ const storageTools: ToolDef[] = [
 
 const broadcastTools: ToolDef[] = [
   {
-    name: "telebothost_start_broadcast",
+    name: "start_broadcast",
     description:
       "Start a broadcast job that sends a message to all bot subscribers matching the given filters. ⚠️ This sends real Telegram messages to many users — use with caution.",
     inputSchema: {
@@ -564,7 +564,7 @@ const broadcastTools: ToolDef[] = [
     },
   },
   {
-    name: "telebothost_get_broadcast_stats",
+    name: "get_broadcast_stats",
     description: "Get real-time progress metrics and status of a broadcast job.",
     inputSchema: {
       type: "object",
@@ -580,7 +580,7 @@ const broadcastTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_stop_broadcast",
+    name: "stop_broadcast",
     description: "Stop an actively processing broadcast job immediately.",
     inputSchema: {
       type: "object",
@@ -594,7 +594,7 @@ const broadcastTools: ToolDef[] = [
       json((await c.post(`/bot/${arg(a, "botid")}/broadcast/stop/${arg(a, "broadcastId")}`)).data),
   },
   {
-    name: "telebothost_modify_broadcast",
+    name: "modify_broadcast",
     description: "Modify the message body for pending batches of an active broadcast mid-run.",
     inputSchema: {
       type: "object",
@@ -619,7 +619,7 @@ const broadcastTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_delete_broadcast",
+    name: "delete_broadcast",
     description: "Delete a completed or stopped broadcast tracking record and clean Redis keys.",
     inputSchema: {
       type: "object",
@@ -635,7 +635,7 @@ const broadcastTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_list_broadcasts",
+    name: "list_broadcasts",
     description: "List all broadcasts queued or run for a specific bot. Optional status filter.",
     inputSchema: {
       type: "object",
@@ -662,7 +662,7 @@ const broadcastTools: ToolDef[] = [
 
 const commandTools: ToolDef[] = [
   {
-    name: "telebothost_list_commands",
+    name: "list_commands",
     description: "List all commands and command folders registered for a bot.",
     inputSchema: {
       type: "object",
@@ -672,7 +672,7 @@ const commandTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/commands`)).data),
   },
   {
-    name: "telebothost_create_command",
+    name: "create_command",
     description:
       "Create a new bot command. Subject to creation rate limits (10/sec, 30/min, 200/hr) and bot capacity cap (1000 commands, 10MB total).",
     inputSchema: {
@@ -699,7 +699,7 @@ const commandTools: ToolDef[] = [
     },
   },
   {
-    name: "telebothost_delete_commands",
+    name: "delete_commands",
     description: "Delete one or more commands from a bot in a single batch operation.",
     inputSchema: {
       type: "object",
@@ -713,7 +713,7 @@ const commandTools: ToolDef[] = [
       json((await c.delete(`/bot/${arg(a, "botid")}/commands`, { ids: arg(a, "ids") })).data),
   },
   {
-    name: "telebothost_list_deleted_commands",
+    name: "list_deleted_commands",
     description: "List all soft-deleted commands for a bot (recoverable for 7 days).",
     inputSchema: {
       type: "object",
@@ -723,7 +723,7 @@ const commandTools: ToolDef[] = [
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/commands/deleted`)).data),
   },
   {
-    name: "telebothost_recover_deleted_command",
+    name: "recover_deleted_command",
     description: "Restore a soft-deleted command by its deletion record ID back into the bot's active commands.",
     inputSchema: {
       type: "object",
@@ -746,7 +746,7 @@ const commandTools: ToolDef[] = [
 
 const storeTools: ToolDef[] = [
   {
-    name: "telebothost_list_store_bots",
+    name: "list_store_bots",
     description:
       "List bots in the community store, sorted by popularity (install count). Authenticated endpoint.",
     inputSchema: {
@@ -769,7 +769,7 @@ const storeTools: ToolDef[] = [
       ),
   },
   {
-    name: "telebothost_install_store_bot",
+    name: "install_store_bot",
     description:
       "Install a community store bot into your account. Environment values are cleared and must be configured after install. Subject to store install rate limits (1/sec, 5/min, 20/hr). Requires sk_* key.",
     inputSchema: {
@@ -789,7 +789,7 @@ const storeTools: ToolDef[] = [
 
 const quotaTools: ToolDef[] = [
   {
-    name: "telebothost_get_quota",
+    name: "get_quota",
     description:
       "Check your current rate-limit quota (daily, per-minute, monthly). Makes a lightweight GET /bot call and returns the X-RateLimit-* headers from the response.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },

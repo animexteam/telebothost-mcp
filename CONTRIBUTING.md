@@ -26,13 +26,13 @@ lib/types.ts   → Shared TypeScript types
 
 1. Open `lib/tools.ts`
 2. Add a new `ToolDef` object to the appropriate group array
-3. Follow the existing patterns — name prefix `telebothost_`, clear description, JSON-Schema input
+3. Follow the existing patterns — short snake_case names (no prefix), clear description, JSON-Schema input
 4. Run `npm run typecheck` to verify
 5. Test locally with `npm run dev` + curl
 
 ```typescript
 {
-  name: "telebothost_your_new_tool",
+  name: "your_new_tool",
   description: "What it does, clearly.",
   inputSchema: {
     type: "object",
@@ -45,7 +45,7 @@ lib/types.ts   → Shared TypeScript types
 
 ## Guidelines
 
-- **Naming**: All tools use `telebothost_` prefix
+- **Naming**: Short snake_case names, no prefix (e.g. `get_bot`, `start_broadcast`)
 - **Descriptions**: First line = one-sentence summary. Add ⚠️ for dangerous ops
 - **Errors**: Let `TbhApiError` bubble up — the handler converts it to a clean MCP error
 - **Types**: Strict mode is on. No `any` (except the handler return type, which is intentional)

@@ -1,6 +1,6 @@
 {
   "name": "telebothost-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "TeleBotHost Developer API MCP Server — Model Context Protocol server for the TeleBotHost Developer API, deployable on Vercel, Render, Railway, Fly.io, or any Node host.",
   "type": "module",
   "main": "server.ts",

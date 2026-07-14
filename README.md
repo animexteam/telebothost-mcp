@@ -274,7 +274,7 @@ curl -X POST https://your-deployed-url/api/mcp \
 # Call a tool (no auth required)
 curl -X POST https://your-deployed-url/api/mcp \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"telebothost_get_status","arguments":{}}}'
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
 ```
 
 ---
@@ -285,87 +285,87 @@ curl -X POST https://your-deployed-url/api/mcp \
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_get_status` | API health & version probe |
+| `get_status` | API health & version probe |
 
 ### 🌐 Public Discovery (8) — no auth required
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_get_public_user` | Get a user's public profile |
-| `telebothost_list_public_user_bots` | List a user's published bots & templates |
-| `telebothost_get_public_user_bot` | Get a published bot by Telegram username |
-| `telebothost_get_public_user_bot_readme` | Get published bot README only |
-| `telebothost_list_templates` | Browse shareable bot templates |
-| `telebothost_get_template` | Get a template by ID |
-| `telebothost_get_template_readme` | Get template README |
-| `telebothost_list_public_store_bots` | Browse community store (public) |
-| `telebothost_get_public_store_bot` | Get a store listing (public) |
+| `get_public_user` | Get a user's public profile |
+| `list_public_user_bots` | List a user's published bots & templates |
+| `get_public_user_bot` | Get a published bot by Telegram username |
+| `get_public_user_bot_readme` | Get published bot README only |
+| `list_templates` | Browse shareable bot templates |
+| `get_template` | Get a template by ID |
+| `get_template_readme` | Get template README |
+| `list_public_store_bots` | Browse community store (public) |
+| `get_public_store_bot` | Get a store listing (public) |
 
 ### 🤖 Bot Lifecycle (18) — `sk_*` key required for writes
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_list_bots` | List your bots + statistics |
-| `telebothost_register_bot` | Register a new bot |
-| `telebothost_delete_bots` | Soft-delete bots (10-day backup) |
-| `telebothost_list_deleted_bots` | List soft-deleted bots |
-| `telebothost_recover_deleted_bot` | Recover a soft-deleted bot |
-| `telebothost_purge_deleted_bot` | Permanently delete from backup |
-| `telebothost_pin_bots` | Pin / unpin bots |
-| `telebothost_get_bot` | Get single bot details |
-| `telebothost_update_bot` | Update bot config |
-| `telebothost_export_bot` | Generate temp download URL |
-| `telebothost_clone_bot` | Clone a bot or template |
-| `telebothost_clone_bot_as_child` | Clone as child (inherits env/commands) |
-| `telebothost_list_bot_children` | List child bots of a parent |
-| `telebothost_transfer_bot` | Transfer bot to another user |
-| `telebothost_reset_bot` | Reset logs & sessions |
-| `telebothost_toggle_bot_template` | Toggle template status |
-| `telebothost_get_bot_readme` | Get bot README (owner) |
-| `telebothost_update_bot_readme` | Update README (template only) |
+| `list_bots` | List your bots + statistics |
+| `register_bot` | Register a new bot |
+| `delete_bots` | Soft-delete bots (10-day backup) |
+| `list_deleted_bots` | List soft-deleted bots |
+| `recover_deleted_bot` | Recover a soft-deleted bot |
+| `purge_deleted_bot` | Permanently delete from backup |
+| `pin_bots` | Pin / unpin bots |
+| `get_bot` | Get single bot details |
+| `update_bot` | Update bot config |
+| `export_bot` | Generate temp download URL |
+| `clone_bot` | Clone a bot or template |
+| `clone_bot_as_child` | Clone as child (inherits env/commands) |
+| `list_bot_children` | List child bots of a parent |
+| `transfer_bot` | Transfer bot to another user |
+| `reset_bot` | Reset logs & sessions |
+| `toggle_bot_template` | Toggle template status |
+| `get_bot_readme` | Get bot README (owner) |
+| `update_bot_readme` | Update README (template only) |
 
 ### 💾 Bot Storage (4)
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_get_bot_storage_stats` | Sync/async storage size & metrics |
-| `telebothost_get_bot_storage_keys` | List storage keys (no values) |
-| `telebothost_clear_bot_storage` | Clear all storage (irreversible) |
-| `telebothost_migrate_bot_storage` | Migrate sync → async storage |
+| `get_bot_storage_stats` | Sync/async storage size & metrics |
+| `get_bot_storage_keys` | List storage keys (no values) |
+| `clear_bot_storage` | Clear all storage (irreversible) |
+| `migrate_bot_storage` | Migrate sync → async storage |
 
 ### 📢 Broadcasts (6)
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_start_broadcast` | Start a broadcast (`confirm=true` required) |
-| `telebothost_get_broadcast_stats` | Real-time broadcast progress |
-| `telebothost_stop_broadcast` | Stop an active broadcast |
-| `telebothost_modify_broadcast` | Modify message body mid-run |
-| `telebothost_delete_broadcast` | Delete broadcast history record |
-| `telebothost_list_broadcasts` | List broadcasts for a bot |
+| `start_broadcast` | Start a broadcast (`confirm=true` required) |
+| `get_broadcast_stats` | Real-time broadcast progress |
+| `stop_broadcast` | Stop an active broadcast |
+| `modify_broadcast` | Modify message body mid-run |
+| `delete_broadcast` | Delete broadcast history record |
+| `list_broadcasts` | List broadcasts for a bot |
 
 ### ⚡ Commands (5)
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_list_commands` | List commands & folders |
-| `telebothost_create_command` | Create a new command |
-| `telebothost_delete_commands` | Batch delete commands |
-| `telebothost_list_deleted_commands` | List soft-deleted commands (7-day recovery) |
-| `telebothost_recover_deleted_command` | Recover a deleted command |
+| `list_commands` | List commands & folders |
+| `create_command` | Create a new command |
+| `delete_commands` | Batch delete commands |
+| `list_deleted_commands` | List soft-deleted commands (7-day recovery) |
+| `recover_deleted_command` | Recover a deleted command |
 
 ### 🛍️ Community Store (2)
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_list_store_bots` | Browse store (authenticated) |
-| `telebothost_install_store_bot` | Install a store bot |
+| `list_store_bots` | Browse store (authenticated) |
+| `install_store_bot` | Install a store bot |
 
 ### 📊 Quota (1)
 
 | Tool | Description |
 |------|-------------|
-| `telebothost_get_quota` | Check daily / per-minute / monthly limits |
+| `get_quota` | Check daily / per-minute / monthly limits |
 
 ---
 
@@ -392,7 +392,7 @@ The TeleBotHost API enforces plan-based limits. This MCP server automatically re
 
 > `pub_*` keys are always capped at 1,000/day, 15/min, 15,000/month regardless of plan.
 
-Use `telebothost_get_quota` to check remaining quota at any time.
+Use `get_quota` to check remaining quota at any time.
 
 ---
 
@@ -456,7 +456,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, convent
 
 1. Open `lib/tools.ts`
 2. Add a `ToolDef` to the appropriate group
-3. Use `telebothost_` prefix, clear description, JSON-Schema input
+3. Use `` prefix, clear description, JSON-Schema input
 4. Run `npm run typecheck`
 5. Open a PR
 

@@ -21,7 +21,7 @@ import { allTools } from "./lib/tools.js";
 // ---------------------------------------------------------------------------
 
 const SERVER_NAME = "telebothost-mcp";
-const SERVER_VERSION = "1.0.0";
+const SERVER_VERSION = "1.1.0";
 const PROTOCOL_VERSION = "2024-11-05";
 
 const CORS_HEADERS: Record<string, string> = {
