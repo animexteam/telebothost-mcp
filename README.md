@@ -210,7 +210,7 @@ docker run -p 3000:3000 -e TELEBOTHOST_API_KEY=sk_xxx telebothost-mcp
 
 ## 🔌 Connecting Your AI Client
 
-Once deployed, point any MCP-compatible client at your endpoint:
+Once deployed, point any MCP-compatible client at your endpoint. **Pass your TeleBotHost API key in the `X-Tbh-Api-Key` header** so each call uses your own TBH quota — the server never stores your key.
 
 ### Claude Desktop
 
@@ -221,7 +221,10 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
   "mcpServers": {
     "telebothost": {
       "url": "https://your-deployed-url/api/mcp",
-      "transport": "http"
+      "transport": "http",
+      "headers": {
+        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      }
     }
   }
 }
@@ -235,7 +238,10 @@ Settings → MCP → Add Server:
 {
   "mcpServers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp"
+      "url": "https://your-deployed-url/api/mcp",
+      "headers": {
+        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      }
     }
   }
 }
@@ -249,15 +255,18 @@ Add to your MCP settings:
 {
   "mcp.servers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp"
+      "url": "https://your-deployed-url/api/mcp",
+      "headers": {
+        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      }
     }
   }
 }
 ```
 
-### With `MCP_AUTH_TOKEN` protection
+### With `MCP_AUTH_TOKEN` protection (server-side access control)
 
-If you set `MCP_AUTH_TOKEN`, add the Authorization header:
+If the server has `MCP_AUTH_TOKEN` set (to restrict WHO can call the MCP), add **both** headers:
 
 ```json
 {
@@ -265,26 +274,48 @@ If you set `MCP_AUTH_TOKEN`, add the Authorization header:
     "telebothost": {
       "url": "https://your-deployed-url/api/mcp",
       "headers": {
-        "Authorization": "Bearer your-mcp-auth-token"
+        "Authorization": "Bearer your-mcp-auth-token",
+        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
       }
     }
   }
 }
 ```
 
+- `Authorization: Bearer ...` → authenticates you to the **MCP server** (the `MCP_AUTH_TOKEN`)
+- `X-Tbh-Api-Key: ...` → your **TeleBotHost** API key (forwarded to TBH API)
+
 ### Test with curl
 
 ```bash
-# List all tools
+# List all tools (no TBH key needed)
 curl -X POST https://your-deployed-url/api/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 
-# Call a tool (no auth required)
+# Call a public tool (no TBH key needed)
 curl -X POST https://your-deployed-url/api/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
+
+# Call an authenticated tool (pass your TBH key)
+curl -X POST https://your-deployed-url/api/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-Tbh-Api-Key: sk_your_key_here" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_bots","arguments":{}}}'
 ```
+
+### 🔑 API Key Resolution (Priority Order)
+
+When a `tools/call` request arrives, the server resolves the TBH API key in this order:
+
+| Priority | Source | When to use |
+|----------|--------|-------------|
+| 1 | `X-Tbh-Api-Key` header | **Recommended** — each user passes their own key per-request |
+| 2 | `Authorization: Bearer sk_*` header | Only used if `MCP_AUTH_TOKEN` is NOT set (otherwise Authorization is for MCP auth) |
+| 3 | `TELEBOTHOST_API_KEY` env var | Server-side fallback for single-user / self-hosted setups |
+
+**Best practice:** Don't set `TELEBOTHOST_API_KEY` on the server. Let each client pass `X-Tbh-Api-Key` so everyone uses their own TBH quota.
 
 ---
 
@@ -606,10 +637,36 @@ The AI client can then write the base64 to a file and decode it to get the actua
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `TELEBOTHOST_API_KEY` | **Yes** | TeleBotHost Developer API key (`sk_*` for write, `pub_*` for read-only) |
-| `MCP_AUTH_TOKEN` | No | If set, clients must send `Authorization: Bearer <token>` to access the MCP |
+| `TELEBOTHOST_API_KEY` | **No** (optional) | Server-side fallback TBH API key. **Recommended: leave unset** — let each client pass `X-Tbh-Api-Key` header per-request. Only set this for single-user self-hosted setups. |
+| `MCP_AUTH_TOKEN` | No | If set, clients must send `Authorization: Bearer <token>` to access the MCP itself (separate from TBH API key). Use to restrict WHO can call your MCP. |
 | `TELEBOTHOST_API_BASE` | No | Override API base URL (default: `https://api.telebothost.com/api/v1`) |
 | `PORT` | No | Port for `server.ts` (default: `3000`, auto-set by Render/Railway/Fly) |
+
+### 🔑 Two Layers of Auth (Important!)
+
+This MCP has **two independent auth layers** — don't confuse them:
+
+| Layer | Header | Env Var | Purpose |
+|-------|--------|---------|---------|
+| **MCP access control** | `Authorization: Bearer <MCP_AUTH_TOKEN>` | `MCP_AUTH_TOKEN` | Restrict WHO can call your MCP endpoint |
+| **TeleBotHost API auth** | `X-Tbh-Api-Key: <sk_*>` | `TELEBOTHOST_API_KEY` (fallback) | Authenticate to the upstream TBH API |
+
+**Typical setups:**
+
+1. **Public MCP, per-user TBH keys** (recommended for shared deployments):
+   - Don't set `MCP_AUTH_TOKEN`, don't set `TELEBOTHOST_API_KEY`
+   - Each client passes `X-Tbh-Api-Key: sk_their_own_key` in their MCP config
+   - Server stores no secrets
+
+2. **Protected MCP, per-user TBH keys** (recommended for team deployments):
+   - Set `MCP_AUTH_TOKEN` on server
+   - Don't set `TELEBOTHOST_API_KEY`
+   - Clients pass both `Authorization: Bearer <mcp_token>` AND `X-Tbh-Api-Key: sk_their_own_key`
+
+3. **Personal MCP, server-side key** (simplest for solo use):
+   - Set `TELEBOTHOST_API_KEY` on server
+   - Don't set `MCP_AUTH_TOKEN`
+   - Clients don't need any headers (server uses its env var for all calls)
 
 ---
 
@@ -688,9 +745,10 @@ telebothost-mcp/
 - [x] **v1.0.0** — Initial release: 46 tools, Vercel deployment
 - [x] **v1.1.0** — Cleaner tool names (dropped `telebothost_` prefix)
 - [x] **v1.2.0** — 100% API coverage: added `download_bot` & `import_bot` (binary base64), compliance test suite, multi-platform deploy configs
-- [ ] **v1.3.0** — Docker support, GitHub Actions CI, automated coverage check in CI
-- [ ] **v1.4.0** — SSE streaming transport for stateful deployments (Render/Railway)
-- [ ] **v2.0.0** — Multi-account support (per-request API key override)
+- [x] **v1.3.0** — Per-request API key via `X-Tbh-Api-Key` header (no more hardcoded keys!) — multi-user support, each user uses own TBH quota
+- [ ] **v1.4.0** — Docker support, GitHub Actions CI, automated coverage check in CI
+- [ ] **v1.5.0** — SSE streaming transport for stateful deployments (Render/Railway)
+- [ ] **v2.0.0** — Tool-level RBAC, audit logging, multi-region deployment guide
 
 ---
 

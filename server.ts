@@ -21,13 +21,14 @@ import { allTools } from "./lib/tools.js";
 // ---------------------------------------------------------------------------
 
 const SERVER_NAME = "telebothost-mcp";
-const SERVER_VERSION = "1.2.0";
+const SERVER_VERSION = "1.3.0";
 const PROTOCOL_VERSION = "2024-11-05";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, MCP-Session-Id, MCP-Protocol-Version",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, X-Tbh-Api-Key, MCP-Session-Id, MCP-Protocol-Version",
 };
 
 // ---------------------------------------------------------------------------
@@ -137,7 +138,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const client = new TbhClient();
+      // Per-request API key resolution (priority order):
+      //   1. X-Tbh-Api-Key header (per-call, user's own key)
+      //   2. Authorization header IF it looks like a TBH key (sk_* or pub_*)
+      //      and MCP_AUTH_TOKEN is NOT set (otherwise Authorization is for MCP auth)
+      //   3. TELEBOTHOST_API_KEY env var (server-side fallback)
+      const headerKey = (req.headers["x-tbh-api-key"] as string | undefined) ?? undefined;
+      let authHeaderKey: string | undefined;
+      if (!process.env.MCP_AUTH_TOKEN) {
+        const auth = req.headers["authorization"] ?? "";
+        if (auth.startsWith("Bearer sk_") || auth.startsWith("Bearer pub_")) {
+          authHeaderKey = auth.slice(7);
+        }
+      }
+      const client = new TbhClient({
+        apiKey: headerKey ?? authHeaderKey ?? process.env.TELEBOTHOST_API_KEY,
+      });
+
       try {
         const result = await tool.handler(args, client);
         sendResult(res, id, result);
@@ -168,8 +185,10 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[${SERVER_NAME} v${SERVER_VERSION}] MCP server listening on :${PORT}`);
-  if (!process.env.TELEBOTHOST_API_KEY) {
-    console.warn("⚠️  TELEBOTHOST_API_KEY not set — authenticated endpoints will fail.");
+  if (process.env.TELEBOTHOST_API_KEY) {
+    console.log("  TELEBOTHOST_API_KEY is set — will be used as fallback for requests without per-call key.");
+  } else {
+    console.log("  TELEBOTHOST_API_KEY not set — clients must pass their own key via X-Tbh-Api-Key header.");
   }
 });
 
