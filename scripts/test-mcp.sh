@@ -109,12 +109,20 @@ echo ""
 
 # --- 5. Invalid JSON ---
 echo "Test 5: invalid JSON handling"
-PARSE_RESP=$(curl -s --max-time 15 -X POST "$MCP_URL" \
+# Send invalid JSON. The server (or its host platform) must reject it.
+# We accept either: HTTP 4xx, OR a JSON-RPC -32700 error response.
+PARSE_HTTP_CODE=$(curl -s -o /tmp/mcp_parse_resp.txt -w "%{http_code}" --max-time 15 -X POST "$MCP_URL" \
   -H "Content-Type: application/json" \
   "${AUTH_HEADER[@]}" \
-  -d 'not-valid-json' || echo '{}')
-PARSE_CODE=$(echo "$PARSE_RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('error',{}).get('code',''))" 2>/dev/null || echo "")
-[[ "$PARSE_CODE" == "-32700" ]]; check "Invalid JSON returns -32700 parse error" $?
+  -d 'not-valid-json' || echo "000")
+PARSE_BODY=$(cat /tmp/mcp_parse_resp.txt 2>/dev/null || echo "")
+PARSE_CODE=$(echo "$PARSE_BODY" | python3 -c "import json,sys; print(json.load(sys.stdin).get('error',{}).get('code',''))" 2>/dev/null || echo "")
+
+if [[ "$PARSE_HTTP_CODE" == "400" || "$PARSE_CODE" == "-32700" ]]; then
+  check "Invalid JSON rejected (HTTP $PARSE_HTTP_CODE, code=$PARSE_CODE)" 0
+else
+  check "Invalid JSON rejected (HTTP $PARSE_HTTP_CODE, code=$PARSE_CODE)" 1
+fi
 echo ""
 
 # --- 6. Method not allowed ---
