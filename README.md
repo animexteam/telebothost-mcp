@@ -4,11 +4,13 @@
 
 **A production-ready [Model Context Protocol](https://modelcontextprotocol.io) server for the [TeleBotHost Developer API](https://telebothost.com).**
 
-Expose 46 TeleBotHost tools — bot lifecycle, storage, broadcasts, commands, community store, and more — to any MCP-compatible AI client (Claude Desktop, Cursor, Continue, Cline, etc.).
+Expose **48 tools** covering **100% of the TeleBotHost Developer API** (47/47 endpoints) — bot lifecycle, storage, broadcasts, commands, community store, binary import/export, and more — to any MCP-compatible AI client (Claude Desktop, Cursor, Continue, Cline, etc.).
 
-[![MCP](https://img.shields.io/badge/MCP-1.0-blue.svg)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A520-339933.svg)](https://nodejs.org/)
+[![Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#-api-coverage)
+[![Tools](https://img.shields.io/badge/Tools-48-orange.svg)](#-available-tools-48)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-000.svg)](https://vercel.com)
 [![Deploy on Render](https://img.shields.io/badge/Deploy-Render-46e3b7.svg)](https://render.com)
@@ -19,13 +21,15 @@ Expose 46 TeleBotHost tools — bot lifecycle, storage, broadcasts, commands, co
 
 ## ✨ Features
 
-- **🔧 46 Tools** — Full coverage of the TeleBotHost Developer API across 8 groups
+- **🔧 48 Tools** — **100% coverage** of the TeleBotHost Developer API (47/47 endpoints + 1 quota helper)
 - **🚀 Multi-Platform** — Deploys on Vercel, Render, Railway, Fly.io, or any Node host
 - **🔐 Secure** — Bearer token auth, optional MCP endpoint protection, key-tier awareness (`sk_*` vs `pub_*`)
 - **⚡ Resilient** — Automatic 429 retry with exponential backoff, rate-limit header tracking
+- **📦 Binary-Safe** — Base64-encoded ZIP download/upload for `download_bot` and `import_bot`
 - **🛡️ Safe by Design** — Broadcast tool requires explicit `confirm: true` flag
-- **📦 Zero-Config** — Single env var (`TELEBOTHOST_API_KEY`) to get started
+- **🧪 Tested** — Compliance test suite verifies MCP spec adherence (`scripts/test-mcp.sh`)
 - **🎯 Type-Safe** — Strict TypeScript throughout, clean compile
+- **📦 Zero-Config** — Single env var (`TELEBOTHOST_API_KEY`) to get started
 
 ---
 
@@ -38,11 +42,16 @@ Expose 46 TeleBotHost tools — bot lifecycle, storage, broadcasts, commands, co
   - [Render](#render)
   - [Railway / Fly.io / Self-Host](#railway--flyio--self-host)
 - [Connecting Your AI Client](#-connecting-your-ai-client)
-- [Available Tools (46)]#-available-tools-46)
+- [Available Tools (48)](#-available-tools-48)
+- [MCP Protocol](#-mcp-protocol)
+- [Error Handling](#-error-handling)
+- [Testing](#-testing)
+- [API Coverage](#-api-coverage)
 - [Environment Variables](#-environment-variables)
 - [Rate Limits](#-rate-limits)
 - [Local Development](#-local-development)
 - [Project Structure](#-project-structure)
+- [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -279,7 +288,7 @@ curl -X POST https://your-deployed-url/api/mcp \
 
 ---
 
-## 🛠️ Available Tools (46)
+## 🛠️ Available Tools (48)
 
 ### 🩺 Health (1)
 
@@ -301,7 +310,7 @@ curl -X POST https://your-deployed-url/api/mcp \
 | `list_public_store_bots` | Browse community store (public) |
 | `get_public_store_bot` | Get a store listing (public) |
 
-### 🤖 Bot Lifecycle (18) — `sk_*` key required for writes
+### 🤖 Bot Lifecycle (20) — `sk_*` key required for writes
 
 | Tool | Description |
 |------|-------------|
@@ -314,7 +323,9 @@ curl -X POST https://your-deployed-url/api/mcp \
 | `pin_bots` | Pin / unpin bots |
 | `get_bot` | Get single bot details |
 | `update_bot` | Update bot config |
-| `export_bot` | Generate temp download URL |
+| `export_bot` | Generate temp JWT download URL |
+| `download_bot` | Download bot ZIP (base64-encoded binary) |
+| `import_bot` | Import bot from base64-encoded ZIP |
 | `clone_bot` | Clone a bot or template |
 | `clone_bot_as_child` | Clone as child (inherits env/commands) |
 | `list_bot_children` | List child bots of a parent |
@@ -366,6 +377,228 @@ curl -X POST https://your-deployed-url/api/mcp \
 | Tool | Description |
 |------|-------------|
 | `get_quota` | Check daily / per-minute / monthly limits |
+
+---
+
+## 🔌 MCP Protocol
+
+This server implements the [Model Context Protocol](https://modelcontextprotocol.io) **Streamable HTTP transport** in **stateless mode** — perfect for serverless platforms.
+
+### JSON-RPC 2.0 Methods Supported
+
+| Method | Behavior |
+|--------|----------|
+| `initialize` | Returns `protocolVersion: 2024-11-05`, server capabilities, and server info |
+| `notifications/initialized` | Returns HTTP 202 (acknowledged, no body) |
+| `ping` | Returns empty `{result: {}}` — health check |
+| `tools/list` | Returns all 48 tool definitions (name, description, inputSchema) |
+| `tools/call` | Executes a tool by name with arguments; returns `{content, isError}` |
+
+### Stateless Design
+
+Each HTTP request creates a fresh server instance — no session persistence, no in-memory state. This means:
+
+- ✅ Works on Vercel serverless, AWS Lambda, Cloudflare Workers
+- ✅ Horizontally scalable (any number of replicas)
+- ✅ No cold-start session affinity issues
+- ❌ No server-initiated notifications (clients must poll)
+- ❌ No SSE streaming (single JSON response per request)
+
+### Request/Response Format
+
+**Request:**
+```http
+POST /api/mcp HTTP/1.1
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "list_bots",
+    "arguments": {}
+  }
+}
+```
+
+**Success response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [{ "type": "text", "text": "{...bot data as JSON...}" }]
+  }
+}
+```
+
+**Error response (tool-level):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [{ "type": "text", "text": "TeleBotHost API error 403: ..." }],
+    "isError": true
+  }
+}
+```
+
+**Error response (protocol-level):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": { "code": -32601, "message": "Method not found: foo/bar" }
+}
+```
+
+---
+
+## 🚨 Error Handling
+
+The server implements a layered error handling strategy:
+
+### Layer 1: Protocol Errors (JSON-RPC)
+
+Returned as `{error: {code, message}}` per the JSON-RPC 2.0 spec:
+
+| Code | Meaning | When |
+|------|---------|------|
+| `-32700` | Parse error | Invalid JSON in request body |
+| `-32600` | Invalid Request | Missing `jsonrpc: "2.0"` or `method` |
+| `-32601` | Method not found | Unknown JSON-RPC method |
+| `-32602` | Invalid params | Unknown tool name |
+| `-32603` | Internal error | Unexpected exception in handler |
+
+### Layer 2: Tool Errors (MCP `isError`)
+
+When a tool executes but the upstream TBH API returns an error, the response includes `isError: true` with the error details in the `content` text field. The AI client can read this and decide how to proceed (retry, ask user, etc.).
+
+```json
+{
+  "content": [{
+    "type": "text",
+    "text": "TeleBotHost API error 429: Rate limit exceeded. Retry after 60s."
+  }],
+  "isError": true
+}
+```
+
+### Layer 3: Automatic Retry
+
+HTTP 429 responses from the TBH API are automatically retried up to 3 times with exponential backoff:
+
+| Attempt | Delay |
+|---------|-------|
+| 1 | 2s (or `Retry-After` header) |
+| 2 | 4s |
+| 3 | 8s |
+
+After 3 retries, the 429 is surfaced as a tool error.
+
+### Layer 4: Cloudflare Detection
+
+The TBH API is behind Cloudflare, which may challenge datacenter IPs. The client detects Cloudflare challenge responses (HTTP 403 + `cf_chl` in body) and returns a user-friendly message instead of the raw HTML challenge page.
+
+---
+
+## 🧪 Testing
+
+### Compliance Test Suite
+
+The repo includes a bash-based compliance test suite that verifies MCP spec adherence:
+
+```bash
+# Test against local server
+npm start &
+sleep 2
+MCP_URL=http://localhost:3000/api/mcp ./scripts/test-mcp.sh
+
+# Test against production
+MCP_URL=https://tbh-mcp.vercel.app/api/mcp ./scripts/test-mcp.sh
+
+# With auth token
+MCP_URL=https://your-url/api/mcp MCP_TOKEN=xxx ./scripts/test-mcp.sh
+```
+
+**What it verifies:**
+
+1. `initialize` handshake returns correct protocol version & server info
+2. `ping` returns a result
+3. `tools/list` returns exactly 48 tools
+4. All tools have `name` + `description` + `inputSchema`
+5. All tools use clean names (no `telebothost_` prefix)
+6. `tools/call` rejects unknown tools with error `-32602`
+7. Invalid JSON returns `-32700` parse error
+8. GET method returns HTTP 405 (only POST allowed)
+9. All required tools are present (10 critical tools checked)
+
+### Type Safety
+
+```bash
+npm run typecheck
+# → tsc --noEmit (strict mode, zero errors)
+```
+
+### Manual Smoke Test
+
+```bash
+# Initialize
+curl -X POST $MCP_URL -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+
+# List tools
+curl -X POST $MCP_URL -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Call a tool
+curl -X POST $MCP_URL -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
+```
+
+---
+
+## 📊 API Coverage
+
+This MCP server covers **100% of the TeleBotHost Developer API** — every endpoint in the [OpenAPI 3.0.3 spec](https://api.telebothost.com/api/v1/docs/openapi.json) is mapped to a tool.
+
+| Group | Endpoints | Tools | Coverage |
+|-------|-----------|-------|----------|
+| Health | 1 | 1 | ✅ 100% |
+| Public Discovery | 9 | 9 | ✅ 100% |
+| Bot Lifecycle | 20 | 20 | ✅ 100% |
+| Bot Storage | 4 | 4 | ✅ 100% |
+| Broadcasts | 6 | 6 | ✅ 100% |
+| Commands | 5 | 5 | ✅ 100% |
+| Community Store | 2 | 2 | ✅ 100% |
+| Quota (helper) | — | 1 | N/A (reuses `GET /bot`) |
+| **Total** | **47** | **48** | **✅ 100%** |
+
+### Binary Endpoints (Expert Implementation)
+
+Two endpoints involve binary data (ZIP files) which MCP's JSON model doesn't natively support. They're handled via base64 encoding:
+
+| Endpoint | Tool | Approach |
+|----------|------|----------|
+| `GET /bot/download` | `download_bot` | Downloads ZIP as `ArrayBuffer`, returns base64-encoded string with metadata (size, content-type, filename) |
+| `POST /bot/import` | `import_bot` | Accepts base64-encoded ZIP, decodes to `Uint8Array`, uploads as `multipart/form-data` |
+
+**Example `download_bot` response:**
+```json
+{
+  "success": true,
+  "content_type": "application/zip",
+  "filename": "my-bot.zip",
+  "size_bytes": 4523,
+  "size_kb": 4.42,
+  "encoding": "base64",
+  "base64": "UEsDBBQACAgA..."
+}
+```
+
+The AI client can then write the base64 to a file and decode it to get the actual ZIP.
 
 ---
 
@@ -432,8 +665,10 @@ telebothost-mcp/
 │   └── mcp.ts              # Vercel serverless endpoint (JSON-RPC router)
 ├── lib/
 │   ├── types.ts            # Shared types & TbhApiError
-│   ├── client.ts           # TeleBotHost API client (auth, retry, errors)
-│   └── tools.ts            # All 46 MCP tool definitions
+│   ├── client.ts           # TeleBotHost API client (auth, retry, binary, errors)
+│   └── tools.ts            # All 48 MCP tool definitions
+├── scripts/
+│   └── test-mcp.sh         # Compliance test suite
 ├── server.ts               # Generic Node HTTP server (Render/Railway/Fly)
 ├── render.yaml             # Render.com Blueprint config
 ├── vercel.json             # Vercel serverless config
@@ -445,6 +680,17 @@ telebothost-mcp/
 ├── CONTRIBUTING.md
 └── README.md
 ```
+
+---
+
+## 🗺️ Roadmap
+
+- [x] **v1.0.0** — Initial release: 46 tools, Vercel deployment
+- [x] **v1.1.0** — Cleaner tool names (dropped `telebothost_` prefix)
+- [x] **v1.2.0** — 100% API coverage: added `download_bot` & `import_bot` (binary base64), compliance test suite, multi-platform deploy configs
+- [ ] **v1.3.0** — Docker support, GitHub Actions CI, automated coverage check in CI
+- [ ] **v1.4.0** — SSE streaming transport for stateful deployments (Render/Railway)
+- [ ] **v2.0.0** — Multi-account support (per-request API key override)
 
 ---
 

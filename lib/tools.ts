@@ -1,7 +1,7 @@
 /**
  * TeleBotHost MCP — Tool definitions.
  *
- * 46 tools across 8 groups:
+ * 48 tools across 8 groups:
  *   Health · Public Discovery · Bot Lifecycle · Bot Storage ·
  *   Broadcasts · Commands · Community Store · Quota
  *
@@ -18,6 +18,41 @@ import type { ToolDef, ToolResult, TbhClientLike } from "./types.js";
 /** Wrap any JSON-serialisable value as a successful text tool result. */
 function json(data: unknown): ToolResult {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+}
+
+/** Wrap a binary payload as a base64-encoded text tool result. */
+function binary(data: ArrayBuffer, contentType: string, filename?: string): ToolResult {
+  // Convert ArrayBuffer → base64 in chunks (works in both Node and browser runtimes)
+  const bytes = new Uint8Array(data);
+  let binaryStr = "";
+  const chunkSize = 0x8000; // 32KB chunks to avoid call-stack limits
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binaryStr += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as unknown as number[]);
+  }
+  const base64 = typeof btoa !== "undefined"
+    ? btoa(binaryStr)
+    : Buffer.from(bytes).toString("base64");
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            success: true,
+            content_type: contentType,
+            filename: filename ?? null,
+            size_bytes: bytes.length,
+            size_kb: Math.round((bytes.length / 1024) * 100) / 100,
+            encoding: "base64",
+            base64,
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+  };
 }
 
 /** Extract a typed field from the args object. */
@@ -323,13 +358,75 @@ const botTools: ToolDef[] = [
   {
     name: "export_bot",
     description:
-      "Generate a temporary JWT token and download URL for exporting a bot configuration as ZIP (bot.yaml, .env, commands/). The URL is time-limited.",
+      "Generate a temporary JWT token and download URL for exporting a bot configuration as ZIP (bot.yaml, .env, commands/). The URL is time-limited. Use download_bot with the returned token to fetch the actual ZIP.",
     inputSchema: {
       type: "object",
       properties: { botid: { type: "string", description: "The numeric bot ID." } },
       required: ["botid"],
     },
     handler: async (a, c) => json((await c.get(`/bot/${arg(a, "botid")}/export`)).data),
+  },
+  {
+    name: "download_bot",
+    description:
+      "Download a bot configuration ZIP package (bot.yaml, .env, commands/) using a temporary JWT token from export_bot. Returns the ZIP as base64-encoded binary. Save the base64 field to a file and decode it to get the ZIP. No API key required (uses JWT).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        token: {
+          type: "string",
+          description: "The temporary download JWT token (from export_bot response).",
+        },
+        filename: {
+          type: "string",
+          description: "Optional filename to include in the response metadata.",
+        },
+      },
+      required: ["token"],
+    },
+    handler: async (a, c) => {
+      const res = await c.getBinary("/bot/download", { token: arg(a, "token") });
+      const contentType = res.headers.get("Content-Type") ?? "application/zip";
+      return binary(res.data, contentType, arg(a, "filename") ?? undefined);
+    },
+  },
+  {
+    name: "import_bot",
+    description:
+      "Import a bot from a ZIP package. The ZIP must contain bot.yaml, .env, and commands/ directory (same structure as exported by export_bot/download_bot). Provide the ZIP as base64-encoded string. Requires sk_* key. Subject to plan-based creation rate limits (e.g. 1 request per 5 min on FREE).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        base64: {
+          type: "string",
+          description: "Base64-encoded ZIP file content (the bot configuration package).",
+        },
+        filename: {
+          type: "string",
+          description: "Filename for the upload (default: bot-import.zip).",
+          default: "bot-import.zip",
+        },
+      },
+      required: ["base64"],
+    },
+    handler: async (a, c) => {
+      const base64: string = arg(a, "base64");
+      const filename: string = arg(a, "filename") ?? "bot-import.zip";
+
+      // Decode base64 → Uint8Array
+      const binaryStr = typeof atob !== "undefined"
+        ? atob(base64)
+        : Buffer.from(base64, "base64").toString("binary");
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+      // Build multipart form-data
+      const form = new FormData();
+      const blob = new Blob([bytes], { type: "application/zip" });
+      form.append("file", blob, filename);
+
+      return json((await c.upload("/bot/import", form)).data);
+    },
   },
   {
     name: "clone_bot",

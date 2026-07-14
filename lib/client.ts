@@ -4,6 +4,8 @@
  * Wraps fetch with:
  *   - Bearer token auth (sk_* or pub_*)
  *   - Automatic JSON serialization / parsing
+ *   - Binary (ArrayBuffer) response support for file downloads
+ *   - Multipart form-data upload support for file imports
  *   - 429 retry with exponential backoff
  *   - Structured error throwing (TbhApiError)
  *   - Rate-limit header capture
@@ -30,7 +32,7 @@ export class TbhClient {
   }
 
   // -----------------------------------------------------------------------
-  // Convenience verbs
+  // Convenience verbs — JSON in / JSON out
   // -----------------------------------------------------------------------
 
   get<T = unknown>(path: string, query?: Record<string, unknown>): Promise<TbhResponse<T>> {
@@ -54,6 +56,26 @@ export class TbhClient {
   }
 
   // -----------------------------------------------------------------------
+  // Binary helpers — for file upload / download
+  // -----------------------------------------------------------------------
+
+  /** Download a binary resource. Returns raw ArrayBuffer + content-type. */
+  getBinary(
+    path: string,
+    query?: Record<string, unknown>,
+  ): Promise<TbhResponse<ArrayBuffer>> {
+    return this.request<ArrayBuffer>("GET", path, { query, binary: true });
+  }
+
+  /** Upload a binary body using multipart/form-data. */
+  upload<T = unknown>(
+    path: string,
+    formData: FormData,
+  ): Promise<TbhResponse<T>> {
+    return this.request<T>("POST", path, { body: formData });
+  }
+
+  // -----------------------------------------------------------------------
   // Core request engine
   // -----------------------------------------------------------------------
 
@@ -64,6 +86,7 @@ export class TbhClient {
       query?: Record<string, unknown>;
       body?: unknown;
       headers?: Record<string, string>;
+      binary?: boolean;
     } = {},
   ): Promise<TbhResponse<T>> {
     const url = new URL(this.baseUrl.replace(/\/$/, "") + path);
@@ -77,7 +100,7 @@ export class TbhClient {
     }
 
     const headers: Record<string, string> = {
-      Accept: "application/json",
+      Accept: opts.binary ? "*/*" : "application/json",
       "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
       Referer: "https://api.telebothost.com/api/v1/docs",
@@ -91,6 +114,7 @@ export class TbhClient {
     let body: string | FormData | undefined;
     if (opts.body !== undefined) {
       if (opts.body instanceof FormData) {
+        // Let fetch set the multipart boundary automatically
         body = opts.body;
       } else {
         headers["Content-Type"] = "application/json";
@@ -113,6 +137,25 @@ export class TbhClient {
           continue;
         }
 
+        // --- Binary response path ---
+        if (opts.binary) {
+          if (!res.ok) {
+            const text = await res.text();
+            let errMsg = `HTTP ${res.status}`;
+            try {
+              const j = JSON.parse(text);
+              errMsg = j.message || j.reason || errMsg;
+            } catch {
+              if (text.length > 200) errMsg = text.substring(0, 200) + "... (truncated)";
+              else errMsg = text || errMsg;
+            }
+            throw new TbhApiError(errMsg, res.status, text);
+          }
+          const buf = await res.arrayBuffer();
+          return { data: buf as T, status: res.status, headers: res.headers };
+        }
+
+        // --- JSON / text response path ---
         const text = await res.text();
         let data: unknown;
         try {

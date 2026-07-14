@@ -30,6 +30,8 @@ export interface TbhClientLike {
   put<T = unknown>(path: string, body?: unknown): Promise<TbhResponse<T>>;
   patch<T = unknown>(path: string, body?: unknown): Promise<TbhResponse<T>>;
   delete<T = unknown>(path: string, body?: unknown): Promise<TbhResponse<T>>;
+  getBinary(path: string, query?: Record<string, unknown>): Promise<TbhResponse<ArrayBuffer>>;
+  upload<T = unknown>(path: string, formData: FormData): Promise<TbhResponse<T>>;
 }
 
 /** Response wrapper from the TBH API. */
