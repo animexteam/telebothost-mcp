@@ -719,16 +719,20 @@ curl -X POST http://localhost:3000/api/mcp \
 ```
 telebothost-mcp/
 ├── api/
-│   └── mcp.ts              # Vercel serverless endpoint (JSON-RPC router)
+│   ├── index.ts            # GET /         → Docs page (root)
+│   ├── docs.ts             # GET /docs     → Docs page (alias)
+│   ├── health.ts           # GET /api/health → JSON health probe
+│   └── mcp.ts              # POST /api/mcp → MCP JSON-RPC endpoint
 ├── lib/
 │   ├── types.ts            # Shared types & TbhApiError
 │   ├── client.ts           # TeleBotHost API client (auth, retry, binary, errors)
-│   └── tools.ts            # All 48 MCP tool definitions
+│   ├── tools.ts            # All 48 MCP tool definitions
+│   └── docs.ts             # HTML docs page generator
 ├── scripts/
 │   └── test-mcp.sh         # Compliance test suite
 ├── server.ts               # Generic Node HTTP server (Render/Railway/Fly)
 ├── render.yaml             # Render.com Blueprint config
-├── vercel.json             # Vercel serverless config
+├── vercel.json             # Vercel serverless config + routes
 ├── .env.example            # Environment variable template
 ├── .nvmrc                  # Node version pin
 ├── package.json
@@ -737,6 +741,15 @@ telebothost-mcp/
 ├── CONTRIBUTING.md
 └── README.md
 ```
+
+## 🌐 Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Documentation page (HTML) — tool list, quick start, configs |
+| `GET` | `/docs` | Alias for `/` |
+| `GET` | `/api/health` | JSON health probe — `{"status":"ok","tools":48,...}` |
+| `POST` | `/api/mcp` | MCP JSON-RPC endpoint (initialize, tools/list, tools/call) |
 
 ---
 

@@ -15,6 +15,7 @@ import http from "node:http";
 import { TbhClient } from "./lib/client.js";
 import { TbhApiError } from "./lib/types.js";
 import { allTools } from "./lib/tools.js";
+import { generateDocsHtml, generateHealthJson } from "./lib/docs.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,7 +39,11 @@ const CORS_HEADERS: Record<string, string> = {
 const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
 const server = http.createServer(async (req, res) => {
-  // CORS preflight
+  const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+  const path = url.pathname;
+  const origin = `http://${req.headers.host ?? "localhost"}`;
+
+  // ─── CORS preflight ───
   if (req.method === "OPTIONS") {
     for (const [k, v] of Object.entries(CORS_HEADERS)) res.setHeader(k, v);
     res.writeHead(204);
@@ -46,6 +51,27 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── GET routes: docs + health ───
+  if (req.method === "GET") {
+    // Health endpoint
+    if (path === "/api/health" || path === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(generateHealthJson(origin));
+      return;
+    }
+    // Docs endpoint (root + /docs)
+    if (path === "/" || path === "/docs" || path === "/index.html") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" });
+      res.end(generateDocsHtml(origin));
+      return;
+    }
+    // Unknown GET → 404 with helpful message
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Not found", hint: "POST to /api/mcp for MCP, GET / for docs" }));
+    return;
+  }
+
+  // ─── MCP endpoint (POST /api/mcp or /) ───
   if (req.method !== "POST") {
     for (const [k, v] of Object.entries(CORS_HEADERS)) res.setHeader(k, v);
     res.writeHead(405, { "Content-Type": "application/json" });
