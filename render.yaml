@@ -1,11 +1,18 @@
-# Render.com Blueprint — deploys telebothost-mcp as a web service.
-# Docs: https://render.com/docs/blueprint-spec
+# ⚠️  CLOUDFLARE WARNING — READ THIS BEFORE DEPLOYING TO RENDER  ⚠️
 #
-# Quick deploy:
-#   1. Push this repo to GitHub
-#   2. New → Blueprint → select the repo
-#   3. Set TELEBOTHOST_API_KEY in the Render dashboard (secret)
-#   4. Deploy
+# The TeleBotHost API is behind Cloudflare bot detection, which blocks
+# requests from datacenter IPs. Render (like Vercel, Railway, Fly, AWS)
+# uses datacenter IPs, so deployed MCP instances will receive HTTP 403
+# Cloudflare challenge responses and WILL NOT WORK.
+#
+# RECOMMENDED: Run locally via stdio instead (see README.md).
+#   - Uses your residential IP → Cloudflare allows it
+#   - Standard MCP pattern (Claude Desktop, Cursor, VS Code)
+#
+# ALTERNATIVE: Self-host server.ts on a residential connection (home server,
+# VPS with residential proxy, etc.). Only then does this render.yaml apply.
+#
+# ─────────────────────────────────────────────────────────────────────────────
 
 services:
   - type: web
@@ -14,13 +21,13 @@ services:
     plan: free
     region: singapore
     buildCommand: npm ci
-    startCommand: npm start
-    healthCheckPath: /api/mcp
+    startCommand: npm run serve:http
+    healthCheckPath: /api/health
     healthCheckGracePeriodSeconds: 30
     envVars:
       - key: NODE_VERSION
         value: 20.18.0
       - key: TELEBOTHOST_API_KEY
-        sync: false  # set manually in dashboard (secret)
+        sync: false  # set manually in dashboard (required for HTTP mode)
       - key: MCP_AUTH_TOKEN
         sync: false  # optional — protects your MCP endpoint

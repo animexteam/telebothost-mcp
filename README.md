@@ -4,7 +4,7 @@
 
 **A production-ready [Model Context Protocol](https://modelcontextprotocol.io) server for the [TeleBotHost Developer API](https://telebothost.com).**
 
-Expose **48 tools** covering **100% of the TeleBotHost Developer API** (47/47 endpoints) — bot lifecycle, storage, broadcasts, commands, community store, binary import/export, and more — to any MCP-compatible AI client (Claude Desktop, Cursor, Continue, Cline, etc.).
+Runs **locally** via stdio — exposes **48 tools** covering **100% of the TeleBotHost Developer API** (47/47 endpoints) to any MCP-compatible AI client (Claude Desktop, Cursor, Continue, Cline, etc.).
 
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-blue.svg)](https://modelcontextprotocol.io)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
@@ -12,73 +12,42 @@ Expose **48 tools** covering **100% of the TeleBotHost Developer API** (47/47 en
 [![Coverage](https://img.shields.io/badge/API%20Coverage-100%25-brightgreen.svg)](#-api-coverage)
 [![Tools](https://img.shields.io/badge/Tools-48-orange.svg)](#-available-tools-48)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-000.svg)](https://vercel.com)
-[![Deploy on Render](https://img.shields.io/badge/Deploy-Render-46e3b7.svg)](https://render.com)
+[![Runtime: stdio](https://img.shields.io/badge/Runtime-stdio-9cf.svg)](#-why-local-stdio)
 
 </div>
+
+---
+
+## ⚠️ Important: Why Local stdio (Not Cloud Hosted)
+
+The TeleBotHost API is protected by **Cloudflare bot detection**, which blocks requests from datacenter IPs. This means:
+
+| Platform | Works? | Why |
+|----------|--------|-----|
+| **Local stdio** (your machine) | ✅ **Yes** | Uses your residential IP — Cloudflare allows it |
+| Vercel | ❌ No | Datacenter IP → Cloudflare 403 challenge |
+| Render | ❌ No | AWS datacenter IP → Cloudflare 403 challenge |
+| Railway | ❌ No | Datacenter IP → Cloudflare 403 challenge |
+| Fly.io | ❌ No | Datacenter IP → Cloudflare 403 challenge |
+| Self-hosted (home server) | ✅ Yes | Residential IP |
+
+**This is why the server runs locally via stdio** — the standard MCP deployment pattern. Your AI client (Claude Desktop, Cursor) launches the server as a subprocess, and it makes API requests from your IP.
+
+> 💡 **Advanced:** An HTTP server mode (`server.ts`) is included for self-hosting on residential connections. See [HTTP Server Mode](#-http-server-mode-optional) below.
 
 ---
 
 ## ✨ Features
 
 - **🔧 48 Tools** — **100% coverage** of the TeleBotHost Developer API (47/47 endpoints + 1 quota helper)
-- **🚀 Multi-Platform** — Deploys on Vercel, Render, Railway, Fly.io, or any Node host
-- **🔐 Secure** — Bearer token auth, optional MCP endpoint protection, key-tier awareness (`sk_*` vs `pub_*`)
+- **🏠 Runs Locally** — stdio transport, uses your residential IP, no Cloudflare issues
+- **🔐 Secure** — API key in env var (set in client config), never transmitted over network
 - **⚡ Resilient** — Automatic 429 retry with exponential backoff, rate-limit header tracking
 - **📦 Binary-Safe** — Base64-encoded ZIP download/upload for `download_bot` and `import_bot`
 - **🛡️ Safe by Design** — Broadcast tool requires explicit `confirm: true` flag
-- **🧪 Tested** — Compliance test suite verifies MCP spec adherence (`scripts/test-mcp.sh`)
+- **🧪 Tested** — Compliance test suite verifies MCP spec adherence
 - **🎯 Type-Safe** — Strict TypeScript throughout, clean compile
-- **📦 Zero-Config** — Single env var (`TELEBOTHOST_API_KEY`) to get started
-
----
-
-## 📋 Table of Contents
-
-- [Architecture](#-architecture)
-- [Quick Start](#-quick-start)
-- [Deployment](#-deployment)
-  - [Vercel](#vercel-recommended)
-  - [Render](#render)
-  - [Railway / Fly.io / Self-Host](#railway--flyio--self-host)
-- [Connecting Your AI Client](#-connecting-your-ai-client)
-- [Available Tools (48)](#-available-tools-48)
-- [MCP Protocol](#-mcp-protocol)
-- [Error Handling](#-error-handling)
-- [Testing](#-testing)
-- [API Coverage](#-api-coverage)
-- [Environment Variables](#-environment-variables)
-- [Rate Limits](#-rate-limits)
-- [Local Development](#-local-development)
-- [Project Structure](#-project-structure)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
-- [License](#-license)
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐      POST /api/mcp       ┌─────────────────────┐      Bearer sk_*      ┌─────────────────────┐
-│                 │      JSON-RPC 2.0        │  MCP Server         │      HTTPS            │  TeleBotHost API    │
-│  Claude Desktop │  ───────────────────▶   │  (stateless)        │  ───────────────────▶ │  api.telebothost.com│
-│  Cursor         │                          │  46 tools           │                       │                     │
-│  Continue       │  ◀───────────────────   │  JSON-RPC router    │  ◀─────────────────── │  40 endpoints       │
-│  Cline          │      JSON response      │  TBH API client     │      JSON             │                     │
-└─────────────────┘                          └─────────────────────┘                       └─────────────────────┘
-                                                      │
-                                                      ▼
-                                             ┌─────────────────┐
-                                             │  Vercel         │  ← api/mcp.ts (serverless)
-                                             │  OR Render      │  ← server.ts (Node HTTP)
-                                             │  OR Railway     │
-                                             │  OR Fly.io      │
-                                             └─────────────────┘
-```
-
-**Transport:** Streamable HTTP (stateless JSON-RPC 2.0 over HTTP POST)
-**Runtime:** Node.js 20+ · TypeScript 5.7 · @modelcontextprotocol/sdk 1.x
+- **📦 Zero-Config Install** — Just `npx telebothost-mcp` or `npx github:sahilxteam/telebothost-mcp`
 
 ---
 
@@ -92,127 +61,9 @@ Expose **48 tools** covering **100% of the TeleBotHost Developer API** (47/47 en
    - `sk_*` — **Secret key** (full write access) — keep private
    - `pub_*` — **Public key** (read-only) — safe for client-side
 
-### 2. Deploy (pick a platform)
+### 2. Add to your AI client
 
-| Platform | One-click | Difficulty |
-|----------|-----------|------------|
-| **Vercel** | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sahilxteam/telebothost-mcp&env=TELEBOTHOST_API_KEY&envDescription=Your%20TeleBotHost%20Developer%20API%20key&project-name=telebothost-mcp) | ⭐ Easiest |
-| **Render** | [Blueprint ready](#render) | ⭐ Easy |
-| **Railway** | `railway up` | ⭐⭐ Medium |
-| **Fly.io** | `fly launch` | ⭐⭐ Medium |
-| **Self-host** | `npm start` | ⭐⭐ Medium |
-
-### 3. Connect your AI client
-
-See [Connecting Your AI Client](#-connecting-your-ai-client) below.
-
----
-
-## 📦 Deployment
-
-### Vercel (Recommended)
-
-**One-click deploy:**
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sahilxteam/telebothost-mcp&env=TELEBOTHOST_API_KEY&envDescription=Your%20TeleBotHost%20Developer%20API%20key&project-name=telebothost-mcp)
-
-**Manual deploy:**
-
-```bash
-# Clone
-git clone https://github.com/sahilxteam/telebothost-mcp.git
-cd telebothost-mcp
-npm install
-
-# Set env var
-vercel env add TELEBOTHOST_API_KEY production
-# Paste your sk_* key when prompted
-
-# Deploy
-vercel --prod
-```
-
-Your MCP endpoint: `https://your-project.vercel.app/api/mcp`
-
----
-
-### Render
-
-This repo includes a `render.yaml` blueprint.
-
-**Option A — Dashboard (easiest):**
-
-1. Push this repo to your GitHub
-2. Go to [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**
-3. Select your repo — Render auto-detects `render.yaml`
-4. Add `TELEBOTHOST_API_KEY` as a secret env var
-5. Click **Apply**
-
-**Option B — CLI:**
-
-```bash
-# Install Render CLI
-npm i -g @render-ai/render-cli
-
-# Link & deploy
-render blueprint deploy
-```
-
-Your MCP endpoint: `https://telebothost-mcp.onrender.com/api/mcp`
-
----
-
-### Railway / Fly.io / Self-Host
-
-These platforms use the generic Node server (`server.ts`) via `npm start`.
-
-```bash
-# Clone & install
-git clone https://github.com/sahilxteam/telebothost-mcp.git
-cd telebothost-mcp
-npm install
-
-# Set env vars
-export TELEBOTHOST_API_KEY=sk_your_key_here
-# Optional: export MCP_AUTH_TOKEN=your_mcp_protection_token
-
-# Start
-npm start
-# → [telebothost-mcp v1.0.0] MCP server listening on :3000
-```
-
-**Railway:**
-
-```bash
-railway init
-railway up
-# Set TELEBOTHOST_API_KEY in Railway dashboard
-```
-
-**Fly.io:**
-
-```bash
-fly launch --no-deploy
-fly secrets set TELEBOTHOST_API_KEY=sk_your_key_here
-fly deploy
-```
-
-**Docker (any host):**
-
-```bash
-docker build -t telebothost-mcp .
-docker run -p 3000:3000 -e TELEBOTHOST_API_KEY=sk_xxx telebothost-mcp
-```
-
-> **Note:** Create a `Dockerfile` if you need container builds — the Node server is runtime-agnostic.
-
----
-
-## 🔌 Connecting Your AI Client
-
-Once deployed, point any MCP-compatible client at your endpoint. **Pass your TeleBotHost API key in the `X-Tbh-Api-Key` header** so each call uses your own TBH quota — the server never stores your key.
-
-### Claude Desktop
+#### Claude Desktop
 
 Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
@@ -220,17 +71,19 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 {
   "mcpServers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp",
-      "transport": "http",
-      "headers": {
-        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      "command": "npx",
+      "args": ["-y", "github:sahilxteam/telebothost-mcp"],
+      "env": {
+        "TELEBOTHOST_API_KEY": "sk_your_key_here"
       }
     }
   }
 }
 ```
 
-### Cursor
+> **Note:** Replace `github:sahilxteam/telebothost-mcp` with `telebothost-mcp` once published to npm.
+
+#### Cursor
 
 Settings → MCP → Add Server:
 
@@ -238,16 +91,17 @@ Settings → MCP → Add Server:
 {
   "mcpServers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp",
-      "headers": {
-        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      "command": "npx",
+      "args": ["-y", "github:sahilxteam/telebothost-mcp"],
+      "env": {
+        "TELEBOTHOST_API_KEY": "sk_your_key_here"
       }
     }
   }
 }
 ```
 
-### VS Code (with Cline / Continue)
+#### VS Code (with Cline / Continue)
 
 Add to your MCP settings:
 
@@ -255,67 +109,51 @@ Add to your MCP settings:
 {
   "mcp.servers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp",
-      "headers": {
-        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      "command": "npx",
+      "args": ["-y", "github:sahilxteam/telebothost-mcp"],
+      "env": {
+        "TELEBOTHOST_API_KEY": "sk_your_key_here"
       }
     }
   }
 }
 ```
 
-### With `MCP_AUTH_TOKEN` protection (server-side access control)
+### 3. Restart & use
 
-If the server has `MCP_AUTH_TOKEN` set (to restrict WHO can call the MCP), add **both** headers:
+Restart your AI client. Try prompts like:
+- "List my TeleBotHost bots"
+- "Create a new command called /start on bot 12345"
+- "Browse the community store and show me the top 5 bots"
+- "What's my current API quota?"
+
+---
+
+## 📦 Alternative: Local Clone
+
+If you prefer to clone the repo (for development or customization):
+
+```bash
+git clone https://github.com/sahilxteam/telebothost-mcp.git
+cd telebothost-mcp
+npm install
+```
+
+Then in your client config, point to the local clone:
 
 ```json
 {
   "mcpServers": {
     "telebothost": {
-      "url": "https://your-deployed-url/api/mcp",
-      "headers": {
-        "Authorization": "Bearer your-mcp-auth-token",
-        "X-Tbh-Api-Key": "sk_your_telebothost_key_here"
+      "command": "node",
+      "args": ["--import", "tsx", "/absolute/path/to/telebothost-mcp/bin/mcp.ts"],
+      "env": {
+        "TELEBOTHOST_API_KEY": "sk_your_key_here"
       }
     }
   }
 }
 ```
-
-- `Authorization: Bearer ...` → authenticates you to the **MCP server** (the `MCP_AUTH_TOKEN`)
-- `X-Tbh-Api-Key: ...` → your **TeleBotHost** API key (forwarded to TBH API)
-
-### Test with curl
-
-```bash
-# List all tools (no TBH key needed)
-curl -X POST https://your-deployed-url/api/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
-
-# Call a public tool (no TBH key needed)
-curl -X POST https://your-deployed-url/api/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
-
-# Call an authenticated tool (pass your TBH key)
-curl -X POST https://your-deployed-url/api/mcp \
-  -H "Content-Type: application/json" \
-  -H "X-Tbh-Api-Key: sk_your_key_here" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_bots","arguments":{}}}'
-```
-
-### 🔑 API Key Resolution (Priority Order)
-
-When a `tools/call` request arrives, the server resolves the TBH API key in this order:
-
-| Priority | Source | When to use |
-|----------|--------|-------------|
-| 1 | `X-Tbh-Api-Key` header | **Recommended** — each user passes their own key per-request |
-| 2 | `Authorization: Bearer sk_*` header | Only used if `MCP_AUTH_TOKEN` is NOT set (otherwise Authorization is for MCP auth) |
-| 3 | `TELEBOTHOST_API_KEY` env var | Server-side fallback for single-user / self-hosted setups |
-
-**Best practice:** Don't set `TELEBOTHOST_API_KEY` on the server. Let each client pass `X-Tbh-Api-Key` so everyone uses their own TBH quota.
 
 ---
 
@@ -413,99 +251,44 @@ When a `tools/call` request arrives, the server resolves the TBH API key in this
 
 ## 🔌 MCP Protocol
 
-This server implements the [Model Context Protocol](https://modelcontextprotocol.io) **Streamable HTTP transport** in **stateless mode** — perfect for serverless platforms.
+This server implements the [Model Context Protocol](https://modelcontextprotocol.io) **stdio transport** — the standard for local AI client integration.
 
 ### JSON-RPC 2.0 Methods Supported
 
 | Method | Behavior |
 |--------|----------|
 | `initialize` | Returns `protocolVersion: 2024-11-05`, server capabilities, and server info |
-| `notifications/initialized` | Returns HTTP 202 (acknowledged, no body) |
+| `notifications/initialized` | Acknowledged (no response) |
 | `ping` | Returns empty `{result: {}}` — health check |
 | `tools/list` | Returns all 48 tool definitions (name, description, inputSchema) |
 | `tools/call` | Executes a tool by name with arguments; returns `{content, isError}` |
 
-### Stateless Design
+### Stdio Design
 
-Each HTTP request creates a fresh server instance — no session persistence, no in-memory state. This means:
-
-- ✅ Works on Vercel serverless, AWS Lambda, Cloudflare Workers
-- ✅ Horizontally scalable (any number of replicas)
-- ✅ No cold-start session affinity issues
-- ❌ No server-initiated notifications (clients must poll)
-- ❌ No SSE streaming (single JSON response per request)
-
-### Request/Response Format
-
-**Request:**
-```http
-POST /api/mcp HTTP/1.1
-Content-Type: application/json
-
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "list_bots",
-    "arguments": {}
-  }
-}
-```
-
-**Success response:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "content": [{ "type": "text", "text": "{...bot data as JSON...}" }]
-  }
-}
-```
-
-**Error response (tool-level):**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "content": [{ "type": "text", "text": "TeleBotHost API error 403: ..." }],
-    "isError": true
-  }
-}
-```
-
-**Error response (protocol-level):**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": { "code": -32601, "message": "Method not found: foo/bar" }
-}
-```
+- The AI client launches the server as a subprocess
+- Client writes JSON-RPC requests to the server's **stdin**
+- Server writes JSON-RPC responses to **stdout**
+- Server writes logs/diagnostics to **stderr**
+- Single-user, single-session — no auth headers needed
+- API key read from `TELEBOTHOST_API_KEY` env var (set in client config)
 
 ---
 
 ## 🚨 Error Handling
 
-The server implements a layered error handling strategy:
-
 ### Layer 1: Protocol Errors (JSON-RPC)
-
-Returned as `{error: {code, message}}` per the JSON-RPC 2.0 spec:
 
 | Code | Meaning | When |
 |------|---------|------|
-| `-32700` | Parse error | Invalid JSON in request body |
+| `-32700` | Parse error | Invalid JSON in request |
 | `-32600` | Invalid Request | Missing `jsonrpc: "2.0"` or `method` |
 | `-32601` | Method not found | Unknown JSON-RPC method |
 | `-32602` | Invalid params | Unknown tool name |
-| `-32603` | Internal error | Unexpected exception in handler |
+| `-32603` | Internal error | Unexpected exception |
 
 ### Layer 2: Tool Errors (MCP `isError`)
 
-When a tool executes but the upstream TBH API returns an error, the response includes `isError: true` with the error details in the `content` text field. The AI client can read this and decide how to proceed (retry, ask user, etc.).
+When the upstream TBH API returns an error, the response includes `isError: true`:
 
 ```json
 {
@@ -519,19 +302,11 @@ When a tool executes but the upstream TBH API returns an error, the response inc
 
 ### Layer 3: Automatic Retry
 
-HTTP 429 responses from the TBH API are automatically retried up to 3 times with exponential backoff:
-
-| Attempt | Delay |
-|---------|-------|
-| 1 | 2s (or `Retry-After` header) |
-| 2 | 4s |
-| 3 | 8s |
-
-After 3 retries, the 429 is surfaced as a tool error.
+HTTP 429 responses from the TBH API are automatically retried up to 3 times with exponential backoff (2s, 4s, 8s).
 
 ### Layer 4: Cloudflare Detection
 
-The TBH API is behind Cloudflare, which may challenge datacenter IPs. The client detects Cloudflare challenge responses (HTTP 403 + `cf_chl` in body) and returns a user-friendly message instead of the raw HTML challenge page.
+If you accidentally run in a datacenter environment, the client detects Cloudflare challenge responses (HTTP 403 + `cf_chl` in body) and returns a clear error message instead of the raw HTML challenge page.
 
 ---
 
@@ -539,19 +314,12 @@ The TBH API is behind Cloudflare, which may challenge datacenter IPs. The client
 
 ### Compliance Test Suite
 
-The repo includes a bash-based compliance test suite that verifies MCP spec adherence:
-
 ```bash
-# Test against local server
-npm start &
-sleep 2
-MCP_URL=http://localhost:3000/api/mcp ./scripts/test-mcp.sh
+# Test the stdio server
+npm test
 
-# Test against production
-MCP_URL=https://tbh-mcp.vercel.app/api/mcp ./scripts/test-mcp.sh
-
-# With auth token
-MCP_URL=https://your-url/api/mcp MCP_TOKEN=xxx ./scripts/test-mcp.sh
+# Or test an HTTP deployment (advanced)
+MCP_URL=http://localhost:3000/api/mcp bash scripts/test-mcp.sh
 ```
 
 **What it verifies:**
@@ -562,31 +330,14 @@ MCP_URL=https://your-url/api/mcp MCP_TOKEN=xxx ./scripts/test-mcp.sh
 4. All tools have `name` + `description` + `inputSchema`
 5. All tools use clean names (no `telebothost_` prefix)
 6. `tools/call` rejects unknown tools with error `-32602`
-7. Invalid JSON returns `-32700` parse error
-8. GET method returns HTTP 405 (only POST allowed)
-9. All required tools are present (10 critical tools checked)
-
-### Type Safety
-
-```bash
-npm run typecheck
-# → tsc --noEmit (strict mode, zero errors)
-```
+7. All required tools are present (10 critical tools checked)
 
 ### Manual Smoke Test
 
 ```bash
-# Initialize
-curl -X POST $MCP_URL -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
-
-# List tools
-curl -X POST $MCP_URL -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
-
-# Call a tool
-curl -X POST $MCP_URL -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_status","arguments":{}}}'
+# Test stdio directly
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | \
+  TELEBOTHOST_API_KEY=sk_your_key node --import tsx bin/mcp.ts
 ```
 
 ---
@@ -607,29 +358,14 @@ This MCP server covers **100% of the TeleBotHost Developer API** — every endpo
 | Quota (helper) | — | 1 | N/A (reuses `GET /bot`) |
 | **Total** | **47** | **48** | **✅ 100%** |
 
-### Binary Endpoints (Expert Implementation)
+### Binary Endpoints
 
-Two endpoints involve binary data (ZIP files) which MCP's JSON model doesn't natively support. They're handled via base64 encoding:
+Two endpoints involve binary data (ZIP files), handled via base64 encoding:
 
 | Endpoint | Tool | Approach |
 |----------|------|----------|
-| `GET /bot/download` | `download_bot` | Downloads ZIP as `ArrayBuffer`, returns base64-encoded string with metadata (size, content-type, filename) |
+| `GET /bot/download` | `download_bot` | Downloads ZIP as `ArrayBuffer`, returns base64-encoded string with metadata |
 | `POST /bot/import` | `import_bot` | Accepts base64-encoded ZIP, decodes to `Uint8Array`, uploads as `multipart/form-data` |
-
-**Example `download_bot` response:**
-```json
-{
-  "success": true,
-  "content_type": "application/zip",
-  "filename": "my-bot.zip",
-  "size_bytes": 4523,
-  "size_kb": 4.42,
-  "encoding": "base64",
-  "base64": "UEsDBBQACAgA..."
-}
-```
-
-The AI client can then write the base64 to a file and decode it to get the actual ZIP.
 
 ---
 
@@ -637,42 +373,16 @@ The AI client can then write the base64 to a file and decode it to get the actua
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `TELEBOTHOST_API_KEY` | **No** (optional) | Server-side fallback TBH API key. **Recommended: leave unset** — let each client pass `X-Tbh-Api-Key` header per-request. Only set this for single-user self-hosted setups. |
-| `MCP_AUTH_TOKEN` | No | If set, clients must send `Authorization: Bearer <token>` to access the MCP itself (separate from TBH API key). Use to restrict WHO can call your MCP. |
+| `TELEBOTHOST_API_KEY` | **Yes** | TeleBotHost Developer API key (`sk_*` for write, `pub_*` for read-only). Set in your MCP client config's `env` field. |
 | `TELEBOTHOST_API_BASE` | No | Override API base URL (default: `https://api.telebothost.com/api/v1`) |
-| `PORT` | No | Port for `server.ts` (default: `3000`, auto-set by Render/Railway/Fly) |
 
-### 🔑 Two Layers of Auth (Important!)
-
-This MCP has **two independent auth layers** — don't confuse them:
-
-| Layer | Header | Env Var | Purpose |
-|-------|--------|---------|---------|
-| **MCP access control** | `Authorization: Bearer <MCP_AUTH_TOKEN>` | `MCP_AUTH_TOKEN` | Restrict WHO can call your MCP endpoint |
-| **TeleBotHost API auth** | `X-Tbh-Api-Key: <sk_*>` | `TELEBOTHOST_API_KEY` (fallback) | Authenticate to the upstream TBH API |
-
-**Typical setups:**
-
-1. **Public MCP, per-user TBH keys** (recommended for shared deployments):
-   - Don't set `MCP_AUTH_TOKEN`, don't set `TELEBOTHOST_API_KEY`
-   - Each client passes `X-Tbh-Api-Key: sk_their_own_key` in their MCP config
-   - Server stores no secrets
-
-2. **Protected MCP, per-user TBH keys** (recommended for team deployments):
-   - Set `MCP_AUTH_TOKEN` on server
-   - Don't set `TELEBOTHOST_API_KEY`
-   - Clients pass both `Authorization: Bearer <mcp_token>` AND `X-Tbh-Api-Key: sk_their_own_key`
-
-3. **Personal MCP, server-side key** (simplest for solo use):
-   - Set `TELEBOTHOST_API_KEY` on server
-   - Don't set `MCP_AUTH_TOKEN`
-   - Clients don't need any headers (server uses its env var for all calls)
+> In stdio mode, there is no `MCP_AUTH_TOKEN` — the server is single-user and access is controlled by your local machine.
 
 ---
 
 ## ⏱️ Rate Limits
 
-The TeleBotHost API enforces plan-based limits. This MCP server automatically retries on HTTP 429 with exponential backoff (up to 3 retries).
+The TeleBotHost API enforces plan-based limits. This MCP server automatically retries on HTTP 429 with exponential backoff.
 
 | Plan | Daily | Per-min | Monthly |
 |------|-------|---------|---------|
@@ -686,31 +396,41 @@ Use `get_quota` to check remaining quota at any time.
 
 ---
 
-## 💻 Local Development
+## 💻 HTTP Server Mode (Optional)
+
+> ⚠️ **Only works on residential IPs.** Cloud hosting (Vercel/Render/Railway/Fly) will be blocked by Cloudflare.
+
+For self-hosting on a home server or VPS with residential IP, an HTTP server mode is included:
 
 ```bash
-# Install deps
+# Install
+git clone https://github.com/sahilxteam/telebothost-mcp.git
+cd telebothost-mcp
 npm install
 
 # Set env vars
-cp .env.example .env
-# Edit .env with your TELEBOTHOST_API_KEY
+export TELEBOTHOST_API_KEY=sk_your_key_here
+# Optional: export MCP_AUTH_TOKEN=your-mcp-access-token
 
-# Run locally (generic Node server)
-npm run dev
-# → http://localhost:3000/api/mcp
-
-# OR run as Vercel dev (simulates serverless)
-npm run vercel:dev
-
-# Type-check
-npm run typecheck
-
-# Test
-curl -X POST http://localhost:3000/api/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+# Start HTTP server on port 3000
+npm run serve:http
 ```
+
+### HTTP Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Documentation page (HTML) |
+| `GET` | `/docs` | Alias for `/` |
+| `GET` | `/api/health` | JSON health probe |
+| `POST` | `/api/mcp` | MCP JSON-RPC endpoint |
+
+### HTTP Auth (Two Layers)
+
+| Layer | Header | Purpose |
+|-------|--------|---------|
+| **MCP access control** | `Authorization: Bearer <MCP_AUTH_TOKEN>` | Restrict WHO can call your MCP |
+| **TeleBotHost API auth** | `X-Tbh-Api-Key: <sk_*>` | Per-user TBH API key (forwarded to TBH) |
 
 ---
 
@@ -718,38 +438,52 @@ curl -X POST http://localhost:3000/api/mcp \
 
 ```
 telebothost-mcp/
-├── api/
-│   ├── index.ts            # GET /         → Docs page (root)
-│   ├── docs.ts             # GET /docs     → Docs page (alias)
-│   ├── health.ts           # GET /api/health → JSON health probe
-│   └── mcp.ts              # POST /api/mcp → MCP JSON-RPC endpoint
+├── bin/
+│   ├── mcp.js              # Entry point shim (loads tsx, runs mcp.ts)
+│   └── mcp.ts              # stdio MCP server (primary entry point)
 ├── lib/
 │   ├── types.ts            # Shared types & TbhApiError
 │   ├── client.ts           # TeleBotHost API client (auth, retry, binary, errors)
 │   ├── tools.ts            # All 48 MCP tool definitions
-│   └── docs.ts             # HTML docs page generator
+│   └── docs.ts             # HTML docs page generator (for HTTP mode)
 ├── scripts/
 │   └── test-mcp.sh         # Compliance test suite
-├── server.ts               # Generic Node HTTP server (Render/Railway/Fly)
-├── render.yaml             # Render.com Blueprint config
-├── vercel.json             # Vercel serverless config + routes
+├── server.ts               # HTTP server (optional, self-hosting only)
+├── render.yaml             # Render.com Blueprint (with Cloudflare warning)
 ├── .env.example            # Environment variable template
 ├── .nvmrc                  # Node version pin
-├── package.json
+├── package.json            # bin field → ./bin/mcp.js
 ├── tsconfig.json
 ├── LICENSE
 ├── CONTRIBUTING.md
 └── README.md
 ```
 
-## 🌐 Endpoints
+---
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | Documentation page (HTML) — tool list, quick start, configs |
-| `GET` | `/docs` | Alias for `/` |
-| `GET` | `/api/health` | JSON health probe — `{"status":"ok","tools":48,...}` |
-| `POST` | `/api/mcp` | MCP JSON-RPC endpoint (initialize, tools/list, tools/call) |
+## 💻 Local Development
+
+```bash
+# Install deps
+npm install
+
+# Set env var
+cp .env.example .env
+# Edit .env with your TELEBOTHOST_API_KEY
+
+# Run stdio server (primary mode)
+npm start
+
+# Run HTTP server (advanced, for testing docs page)
+npm run serve:http
+# → http://localhost:3000
+
+# Type-check
+npm run typecheck
+
+# Run compliance tests
+npm test
+```
 
 ---
 
@@ -757,25 +491,17 @@ telebothost-mcp/
 
 - [x] **v1.0.0** — Initial release: 46 tools, Vercel deployment
 - [x] **v1.1.0** — Cleaner tool names (dropped `telebothost_` prefix)
-- [x] **v1.2.0** — 100% API coverage: added `download_bot` & `import_bot` (binary base64), compliance test suite, multi-platform deploy configs
-- [x] **v1.3.0** — Per-request API key via `X-Tbh-Api-Key` header (no more hardcoded keys!) — multi-user support, each user uses own TBH quota
-- [ ] **v1.4.0** — Docker support, GitHub Actions CI, automated coverage check in CI
-- [ ] **v1.5.0** — SSE streaming transport for stateful deployments (Render/Railway)
-- [ ] **v2.0.0** — Tool-level RBAC, audit logging, multi-region deployment guide
+- [x] **v1.2.0** — 100% API coverage: added `download_bot` & `import_bot`, compliance test suite
+- [x] **v1.3.0** — Per-request API key via `X-Tbh-Api-Key` header (HTTP mode)
+- [x] **v1.4.0** — **Pivot to stdio (local run)** — removed Vercel/Render as primary options due to Cloudflare bot detection blocking datacenter IPs
+- [ ] **v1.5.0** — Publish to npm, Docker support, GitHub Actions CI
+- [ ] **v2.0.0** — Cloudflare Workers transport (whitelisted by Cloudflare)
 
 ---
 
 ## 🤝 Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and PR guidelines.
-
-### Adding a new tool
-
-1. Open `lib/tools.ts`
-2. Add a `ToolDef` to the appropriate group
-3. Use `` prefix, clear description, JSON-Schema input
-4. Run `npm run typecheck`
-5. Open a PR
 
 ---
 

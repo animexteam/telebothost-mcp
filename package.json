@@ -1,15 +1,18 @@
 {
   "name": "telebothost-mcp",
-  "version": "1.3.0",
-  "description": "TeleBotHost Developer API MCP Server — Model Context Protocol server for the TeleBotHost Developer API, deployable on Vercel, Render, Railway, Fly.io, or any Node host.",
+  "version": "1.4.0",
+  "description": "TeleBotHost Developer API MCP Server — Model Context Protocol server for the TeleBotHost Developer API. Runs locally via stdio (Claude Desktop, Cursor, VS Code).",
   "type": "module",
-  "main": "server.ts",
+  "main": "bin/mcp.js",
+  "bin": {
+    "telebothost-mcp": "./bin/mcp.js"
+  },
   "scripts": {
-    "start": "node --import tsx server.ts",
-    "dev": "node --import tsx --watch server.ts",
+    "start": "node --import tsx bin/mcp.ts",
+    "dev": "node --import tsx --watch bin/mcp.ts",
+    "serve:http": "node --import tsx server.ts",
     "typecheck": "tsc --noEmit",
-    "vercel:dev": "vercel dev",
-    "vercel:deploy": "vercel --prod --yes"
+    "test": "bash scripts/test-mcp.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
@@ -17,7 +20,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@vercel/node": "^5.1.8",
     "typescript": "^5.7.0"
   },
   "engines": {
@@ -28,12 +30,12 @@
     "model-context-protocol",
     "telebothost",
     "telegram-bot",
-    "bot-hosting",
+    "telegram",
     "ai",
     "claude",
     "cursor",
-    "vercel",
-    "render"
+    "stdio",
+    "typescript"
   ],
   "license": "MIT",
   "homepage": "https://github.com/sahilxteam/telebothost-mcp",
